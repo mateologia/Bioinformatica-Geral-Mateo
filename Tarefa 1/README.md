@@ -8,8 +8,8 @@
 Criação do diretório de trabalho, inicialização do repositório local e instalação das ferramentas de bioinformática (BWA, Samtools e IGV) diretamente pelo terminal do Linux, garantindo que todas as dependências estejam prontas:
 ```bash
 # Criação do diretório de trabalho e navegação
-mkdir -p /home/mateo/tarefa1
-cd /home/mateo/tarefa1
+mkdir -p ~/tarefa1
+cd ~/tarefa1
 
 
 # Inicialização do repositório Git
@@ -19,18 +19,18 @@ mkdir -p ref reads bam
 
 # Instalação dos softwares necessários (Ubuntu/Linux Mint)
 sudo apt update
-sudo apt install bwa samtools igv
+sudo apt install bwa samtools igv sra-toolkit
 ```
 
 ## 2. Genoma de referência
 ```bash
-cd /home/mateo/tarefa1/ref
-wget -O genome.fasta "[https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=AM181176.4&rettype=fasta&retmode=text](https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=AM181176.4&rettype=fasta&retmode=text)"
+cd ~/tarefa1/ref
+wget -O genome.fasta "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=nuccore&id=AM181176.4&rettype=fasta&retmode=text"
 ```
 
 ## 3. Download das leituras
 ```bash
-cd /home/mateo/tarefa1/reads
+cd ~/tarefa1/reads
 fastq-dump -X 100000 --split-files SRR40334418
 ```
 
@@ -38,7 +38,7 @@ fastq-dump -X 100000 --split-files SRR40334418
 Os comandos foram adaptados para utilizar pipes (|), processando o alinhamento e a conversão simultaneamente sem gerar arquivos .sam intermediários, economizando espaço em disco:
 
 ```bash
-cd /home/mateo/tarefa1
+cd ~/tarefa1
 # Indexação da referência para BWA e IGV
 bwa index ref/genome.fasta
 samtools faidx ref/genome.fasta
