@@ -1,0 +1,11 @@
+# Ignorar ficheiros pesados de bioinformática
+reads/
+reads_trimmed/
+alignments/
+genoma/
+*.bam
+*.fastq
+*.fastq.gz
+*.gtf
+*.fasta
+*.fna

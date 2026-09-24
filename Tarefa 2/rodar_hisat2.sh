@@ -1,0 +1,8 @@
+hisat2 -p 4 -x genoma/index_rato -1 reads_trimmed/SRR31221361_1_trimmed.fastq.gz -2 reads_trimmed/SRR31221361_2_trimmed.fastq.gz | samtools view -bS - | samtools sort -@ 4 -o alignments/SRR31221361.bam
+hisat2 -p 4 -x genoma/index_rato -1 reads_trimmed/SRR31221363_1_trimmed.fastq.gz -2 reads_trimmed/SRR31221363_2_trimmed.fastq.gz | samtools view -bS - | samtools sort -@ 4 -o alignments/SRR31221363.bam
+hisat2 -p 4 -x genoma/index_rato -1 reads_trimmed/SRR31221365_1_trimmed.fastq.gz -2 reads_trimmed/SRR31221365_2_trimmed.fastq.gz | samtools view -bS - | samtools sort -@ 4 -o alignments/SRR31221365.bam
+hisat2 -p 4 -x genoma/index_rato -1 reads_trimmed/SRR31221367_1_trimmed.fastq.gz -2 reads_trimmed/SRR31221367_2_trimmed.fastq.gz | samtools view -bS - | samtools sort -@ 4 -o alignments/SRR31221367.bam
+hisat2 -p 4 -x genoma/index_rato -1 reads_trimmed/SRR31221369_1_trimmed.fastq.gz -2 reads_trimmed/SRR31221369_2_trimmed.fastq.gz | samtools view -bS - | samtools sort -@ 4 -o alignments/SRR31221369.bam
+hisat2 -p 4 -x genoma/index_rato -1 reads_trimmed/SRR31221371_1_trimmed.fastq.gz -2 reads_trimmed/SRR31221371_2_trimmed.fastq.gz | samtools view -bS - | samtools sort -@ 4 -o alignments/SRR31221371.bam
+hisat2 -p 4 -x genoma/index_rato -1 reads_trimmed/SRR31221373_1_trimmed.fastq.gz -2 reads_trimmed/SRR31221373_2_trimmed.fastq.gz | samtools view -bS - | samtools sort -@ 4 -o alignments/SRR31221373.bam
+hisat2 -p 4 -x genoma/index_rato -1 reads_trimmed/SRR31221375_1_trimmed.fastq.gz -2 reads_trimmed/SRR31221375_2_trimmed.fastq.gz | samtools view -bS - | samtools sort -@ 4 -o alignments/SRR31221375.bam
