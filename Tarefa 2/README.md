@@ -10,6 +10,7 @@ Repositório destinado ao pipeline completo de transcriptómica (Tarefa 2 da dis
 *   **Amostras:** Selecionadas e descarregadas via NCBI SRA Run Selector (tabela `SraRunTable.csv`).                       
 
 ## 2. Preparação do Ambiente e Aquisição de Dados
+```bash
 conda activate bioinfo
 conda install -c conda-forge -c bioconda fastqc multiqc -y
 cd "/home/mateo/Bioinformatica-Geral-Mateo/Tarefa 2"   
@@ -28,13 +29,17 @@ fastq-dump --split-files --gzip SRR31221371
 fastq-dump --split-files --gzip SRR31221373
 fastq-dump --split-files --gzip SRR31221375
 cd ..
+```
 
 ## 3. Controle de Qualidade (QC)
+```bash
 mkdir -p qc
 fastqc reads/*.fastq.gz -o qc/ -t 4
 multiqc qc/ -o qc/
+```
 
 ## 4. Limpeza das leituras (Trimming)
+```bash
 conda install -c bioconda fastp -y
 mkdir -p reads_trimmed
 
@@ -46,8 +51,9 @@ fastp -i reads/SRR31221369_1.fastq.gz -I reads/SRR31221369_2.fastq.gz -o reads_t
 fastp -i reads/SRR31221371_1.fastq.gz -I reads/SRR31221371_2.fastq.gz -o reads_trimmed/SRR31221371_1_trimmed.fastq.gz -O reads_trimmed/SRR31221371_2_trimmed.fastq.gz -h reads_trimmed/SRR31221371_fastp.html -w 4
 fastp -i reads/SRR31221373_1.fastq.gz -I reads/SRR31221373_2.fastq.gz -o reads_trimmed/SRR31221373_1_trimmed.fastq.gz -O reads_trimmed/SRR31221373_2_trimmed.fastq.gz -h reads_trimmed/SRR31221373_fastp.html -w 4
 fastp -i reads/SRR31221375_1.fastq.gz -I reads/SRR31221375_2.fastq.gz -o reads_trimmed/SRR31221375_1_trimmed.fastq.gz -O reads_trimmed/SRR31221375_2_trimmed.fastq.gz -h reads_trimmed/SRR31221375_fastp.html -w 4
-
+```
 ## 5. Download do genoma e indexação
+```bash
 conda install -c bioconda hisat2 samtools -y
 mkdir -p genoma
 cd genoma
@@ -59,7 +65,9 @@ gunzip Mus_musculus.GRCm39.dna.primary_assembly.fa.gz
 hisat2-build -p 4 Mus_musculus.GRCm39.dna.primary_assembly.fa index_rato
 cd ..
 
+```
 ## 6. Alinhamento do genoma
+```bash
 mkdir -p alignments
 
 cat << 'EOF' > rodar_hisat2.sh
@@ -74,15 +82,19 @@ hisat2 -p 4 -x genoma/index_rato -1 reads_trimmed/SRR31221375_1_trimmed.fastq.gz
 EOF
 
 bash rodar_hisat2.sh
+```
 
 ## 7. Quantificação genética
+```bash
 conda install -c bioconda subread -y
 gunzip -f genoma/Mus_musculus.GRCm39.112.gtf.gz
 mkdir -p contagens
 
 featureCounts -T 4 -p -a genoma/Mus_musculus.GRCm39.112.gtf -o contagens/contagens_genes.txt alignments/*.bam
+```
 
 ## 8. Análise de Expressão Diferencial e Versionamento
+```bash
 conda install -c bioconda -c conda-forge bioconductor-deseq2 bioconductor-enhancedvolcano r-ggplot2 r-pheatmap r-httpgd bioconductor-org.mm.eg.db bioconductor-annotationdbi -y
 
 # Criação do escudo para evitar upload de ficheiros pesados
@@ -98,27 +110,39 @@ genoma/
 *.fasta
 *.fna
 EOF
+```
+
+# Projeto de Análise de RNA-Seq: C3KO vs WT (Porção do R)
 
 # 1. Ler o ficheiro gerado pelo featureCounts e isolar as contagens
+```R
 dados <- read.table("contagens/contagens_genes.txt", header = TRUE, row.names = 1, skip = 1)
 matriz_contagens <- dados[, 6:ncol(dados)]
+```
 
 # 2. Limpar os nomes das colunas para remover texto extra
+```R
 colnames(matriz_contagens) <- gsub("alignments\\.", "", colnames(matriz_contagens))
 colnames(matriz_contagens) <- gsub("\\.bam$", "", colnames(matriz_contagens))
+```
 
 # 3. Criar o delineamento experimental (Metadata)
+```R
 library(DESeq2)
 grupos <- factor(c("C3KO", "C3KO", "C3KO", "C3KO", "WT", "WT", "WT", "WT"))
 grupos <- relevel(grupos, ref = "WT")
 design_exp <- data.frame(row.names = colnames(matriz_contagens), condicao = grupos)
+```
 
 # 4. Executar a Expressão Diferencial
+```R
 dds <- DESeqDataSetFromMatrix(countData = matriz_contagens, colData = design_exp, design = ~ condicao)
 dds <- DESeq(dds)
 resultados <- results(dds)
+```
 
 # 5. Traduzir identificadores Ensembl para Nomes de Genes Oficiais
+```R
 library(AnnotationDbi)
 library(org.Mm.eg.db)
 
@@ -126,8 +150,10 @@ resultados_df <- as.data.frame(resultados)
 resultados_df$Gene_Symbol <- mapIds(org.Mm.eg.db, keys = rownames(resultados_df), column = "SYMBOL", keytype = "ENSEMBL", multiVals = "first")
 resultados_df$Gene_Name <- mapIds(org.Mm.eg.db, keys = rownames(resultados_df), column = "GENENAME", keytype = "ENSEMBL", multiVals = "first")
 resultados_df <- resultados_df[, c("Gene_Symbol", "Gene_Name", "baseMean", "log2FoldChange", "lfcSE", "stat", "pvalue", "padj")]
+```
 
 # 6. Transformar dados e gerar PCA Plot
+```R
 library(EnhancedVolcano)
 library(ggplot2)
 
@@ -138,8 +164,10 @@ pca_plot <- plotPCA(vsd, intgroup = "condicao") +
   theme(plot.title = element_text(hjust = 0.5, face = "bold"))
 
 print(pca_plot)
+```
 
 # 7. Gerar Volcano Plot
+```R
 volcano_plot <- EnhancedVolcano(resultados,
     lab = rownames(resultados),
     x = 'log2FoldChange',
@@ -153,12 +181,15 @@ volcano_plot <- EnhancedVolcano(resultados,
     legendPosition = 'right')
 
 print(volcano_plot)
+```
 
 # 8. Guardar ficheiros finais
+```R
 write.csv(resultados_df, file="contagens/resultados_anotados_finais.csv")
 pdf("contagens/volcano_plot.pdf", width=10, height=8)
 print(volcano_plot)
 dev.off()
+```
 
 
 
