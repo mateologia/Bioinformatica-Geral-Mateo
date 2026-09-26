@@ -119,12 +119,18 @@ featureCounts -T 4 -p -a genoma/Mus_musculus.GRCm39.112.gtf -o contagens/contage
 ```
 
 ---
+## 8. Análise de Expressão Diferencial e Enriquecimento de Vias (GSEA)
+A modelagem estatística, anotação de genes e visualização foram realizadas no R, utilizando os pacotes `DESeq2`, `EnhancedVolcano`, `pheatmap` e `clusterProfiler`. 
 
-## 8. Análise de Expressão Diferencial e Vias (GSEA)
-Instalação das dependências para análise estatística no R (DESeq2, anotações, visualizações avançadas e ClusterProfiler) e configuração do GitHub para ignorar ficheiros pesados:
+**Visualizações Geradas:**
+*   **PCA Plot:** Verificação da variância entre os grupos WT e C3KO (PC1 = 82%).
+*   **Volcano Plot:** Identificação e anotação dos 20 genes mais significativamente diferencialmente expressos.
+*   **Heatmap:** Agrupamento hierárquico dos top 30 genes com maior variação.
+*   **GSEA (Dotplot e Gseaplot):** Análise de enriquecimento de vias ontológicas (GO), confirmando a supressão de respostas imunitárias e processos biossintéticos no grupo C3KO.
 
+Preparação do ambiente no terminal:
 ```bash
-conda install -c bioconda -c conda-forge bioconductor-deseq2 bioconductor-enhancedvolcano r-ggplot2 r-pheatmap r-httpgd bioconductor-org.mm.eg.db bioconductor-annotationdbi bioconductor-clusterprofiler bioconductor-enrichplot r-gdtools -y
+conda install -c bioconda -c conda-forge bioconductor-deseq2 bioconductor-enhancedvolcano r-ggplot2 r-pheatmap r-httpgd bioconductor-org.mm.eg.db bioconductor-annotationdbi bioconductor-clusterprofiler bioconductor-enrichplot r-gdtools r-gridextra -y
 
 # Criação do escudo para evitar upload de ficheiros pesados
 cat << 'EOF' > .gitignore
@@ -139,17 +145,19 @@ genoma/
 *.fasta
 *.fna
 EOF
+
 ```
+A modelagem matemática, anotação de genes e geração dos gráficos finais (PCA, Volcano, Heatmap e Enriquecimento de Vias) foram realizadas utilizando o script analise_expressao.R:
 
-A modelagem matemática, anotação de genes e geração dos gráficos finais (PCA, Volcano, Heatmap e Enriquecimento de Vias) foram realizadas utilizando o script `analise_expressao.R`:
-
-```R
 # 1. Preparação da Matriz de Contagens
+```R
 dados <- read.table("contagens/contagens_genes.txt", header = TRUE, row.names = 1, skip = 1)
 matriz_contagens <- dados[, 6:ncol(dados)]
 colnames(matriz_contagens) <- gsub("alignments\\.|\\.bam$", "", colnames(matriz_contagens))
+```
 
 # 2. Delineamento Experimental (DESeq2)
+```R
 library(DESeq2)
 grupos <- factor(c("C3KO", "C3KO", "C3KO", "C3KO", "WT", "WT", "WT", "WT"))
 grupos <- relevel(grupos, ref = "WT")
@@ -159,22 +167,32 @@ dds <- DESeqDataSetFromMatrix(countData = matriz_contagens, colData = design_exp
 dds <- DESeq(dds)
 resultados <- results(dds)
 vsd <- vst(dds, blind = FALSE)
+```
 
 # 3. Anotação dos Genes (Ensembl para Gene Symbol)
+```R
 library(AnnotationDbi)
 library(org.Mm.eg.db)
 resultados_df <- as.data.frame(resultados)
 resultados_df$Gene_Symbol <- mapIds(org.Mm.eg.db, keys = rownames(resultados_df), column = "SYMBOL", keytype = "ENSEMBL", multiVals = "first")
 resultados_df$Gene_Name <- mapIds(org.Mm.eg.db, keys = rownames(resultados_df), column = "GENENAME", keytype = "ENSEMBL", multiVals = "first")
 write.csv(resultados_df, file="contagens/resultados_anotados_finais.csv")
+```
 
 # 4. Gráficos Base: PCA e Volcano Plot Limpo
+```R
 library(ggplot2)
 library(EnhancedVolcano)
-pca_plot <- plotPCA(vsd, intgroup = "condicao") + ggtitle("PCA - WT vs C3KO") + theme_minimal()
 
+# Gerar e guardar PCA
+pca_plot <- plotPCA(vsd, intgroup = "condicao") + ggtitle("PCA - WT vs C3KO") + theme_minimal()
+pdf("contagens/pca_plot_apresentacao.pdf", width=8, height=6)
+print(pca_plot)
+dev.off()
+
+# Gerar e guardar Volcano Plot
 nomes_grafico <- ifelse(is.na(resultados_df[["Gene_Symbol"]]), rownames(resultados_df), resultados_df[["Gene_Symbol"]])
-top_20_genes <- nomes_grafico[order(resultados_df[["padj"]])][1:20]
+top_20_genes <- nomes_grafico[order(resultados_df[["padj"]])]
 
 volcano_plot_limpo <- EnhancedVolcano(resultados_df, lab = nomes_grafico, x = 'log2FoldChange', y = 'pvalue',
     title = 'Expressão Diferencial: C3KO vs WT', subtitle = 'Infeção por P. aeruginosa',
@@ -184,8 +202,10 @@ volcano_plot_limpo <- EnhancedVolcano(resultados_df, lab = nomes_grafico, x = 'l
 pdf("contagens/volcano_plot_apresentacao.pdf", width=10, height=8)
 print(volcano_plot_limpo)
 dev.off()
+```
 
 # 5. Top 30 Genes: Heatmap
+```R
 library(pheatmap)
 genes_top30 <- head(rownames(resultados_df[order(resultados_df$padj), ]), 30)
 matriz_top30 <- assay(vsd)[genes_top30, ]
@@ -194,8 +214,10 @@ rownames(matriz_top30) <- ifelse(is.na(resultados_df[genes_top30, "Gene_Symbol"]
 pdf("contagens/heatmap_top30.pdf", width=8, height=10)
 pheatmap(matriz_top30, scale = "row", annotation_col = as.data.frame(colData(dds)[,"condicao", drop=FALSE]), main = "Top 30 Genes (C3KO vs WT)")
 dev.off()
+```
 
 # 6. Gene Set Enrichment Analysis (GSEA)
+```R
 library(clusterProfiler)
 library(enrichplot)
 
@@ -211,3 +233,4 @@ dev.off()
 pdf("contagens/gsea_top3_vias.pdf", width=10, height=8)
 gseaplot2(gsea_resultado, geneSetID = 1:3, pvalue_table = TRUE)
 dev.off()
+```
